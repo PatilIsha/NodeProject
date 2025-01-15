@@ -5,14 +5,16 @@ const cors = require("cors");
 // Initialize Express App
 const app = express();
 app.use(express.json());
+
+// Allow all origins for CORS
 app.use(cors());
 
 // MongoDB Connection
 const mongoURI =
   "mongodb+srv://ishapatilgenai:mxspMbPLIDVJWem0@test-db.ybesv.mongodb.net/?retryWrites=true&w=majority&appName=test-db";
-  //mongodb+srv://ishapatilgenai:<db_password>@test-db.ybesv.mongodb.net/?retryWrites=true&w=majority&appName=test-db
+
 mongoose
-  .connect(mongoURI, { useNewUrlParser: true })
+  .connect(mongoURI, {})
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error(err));
 
@@ -51,5 +53,5 @@ app.get('/', (req,res)=>{
 });
 
 // Start Server
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
