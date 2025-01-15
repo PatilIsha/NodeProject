@@ -43,6 +43,7 @@ app.post("/api/signup", async (req, res) => {
     if (error.code === 11000) {
       res.status(400).json({ error: "Email already exists!" });
     } else {
+      console.log(error);
       res.status(500).json({ error: "An error occurred while registering the user." });
     }
   }
