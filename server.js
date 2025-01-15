@@ -11,7 +11,8 @@ app.use(cors());
 
 // MongoDB Connection
 const mongoURI =
-  "mongodb+srv://ishapatilgenai:mxspMbPLIDVJWem0@test-db.ybesv.mongodb.net/?retryWrites=true&w=majority&appName=test-db";
+  "mongodb+srv://Yashodip:YashProjects@yashodipprojects.o5giaw8.mongodb.net/test_db?retryWrites=true&w=majority
+;
 
 mongoose
   .connect(mongoURI, {})
