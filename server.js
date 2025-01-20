@@ -1,19 +1,40 @@
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const cloudinary = require("cloudinary").v2;
+const multer = require("multer");
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-// Initialize Express App
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 // MongoDB Connection
-const mongoURI = "mongodb+srv://ishapatilgenai:mxspMbPLIDVJWem0@test-db.ybesv.mongodb.net/?retryWrites=true&w=majority&appName=test-db";
-mongoose.connect(mongoURI, {})
+const mongoURI = process.env.MONGO_URI;
+mongoose
+  .connect(mongoURI, {})
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error(err));
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Configure Multer Storage with Cloudinary
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "user_images", // Folder name in Cloudinary
+    allowed_formats: ["jpg", "jpeg", "png"], // Allow only specific formats
+  },
+});
+const upload = multer({ storage });
 
 // User Schema
 const userSchema = new mongoose.Schema({
@@ -24,6 +45,7 @@ const userSchema = new mongoose.Schema({
   age: { type: Number, required: true },
   mobile: { type: String, required: true },
   gender: { type: String, required: true },
+  profileImage: { type: String }, // Store image URL
 });
 
 const User = mongoose.model("User", userSchema);
@@ -41,24 +63,36 @@ const authenticateToken = (req, res, next) => {
 };
 
 // Routes
-app.post("/api/signup", async (req, res) => {
+
+// Signup Route with Image Upload
+app.post("/api/signup", upload.single("image"), async (req, res) => {
   const { firstName, lastName, email, password, age, mobile, gender } = req.body;
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ firstName, lastName, email, password: hashedPassword, age, mobile, gender });
+    const newUser = new User({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      age,
+      mobile,
+      gender,
+      profileImage: req.file ? req.file.path : null, // Save image URL from Cloudinary
+    });
     await newUser.save();
     res.status(201).json({ message: "User registered successfully!" });
   } catch (error) {
     if (error.code === 11000) {
       res.status(400).json({ error: "Email already exists!" });
     } else {
-      console.log(error);
-      res.status(500).json({     error: "An error occurred while registering the user." });
+      console.error(error);
+      res.status(500).json({ error: "An error occurred while registering the user." });
     }
   }
 });
 
+// Login Route
 app.post("/api/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -70,17 +104,33 @@ app.post("/api/login", async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: "Invalid email or password" });
 
     const token = jwt.sign({ id: user._id, email: user.email }, "secretkey", { expiresIn: "1h" });
-    res.json({ message: "Login successful", token, user: { firstName: user.firstName, lastName: user.lastName } });
+    res.json({
+      message: "Login successful",
+      token,
+      user: { firstName: user.firstName, lastName: user.lastName, profileImage: user.profileImage },
+    });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ error: "An error occurred during login" });
   }
 });
 
+// Protected Dashboard Route
 app.get("/api/dashboard", authenticateToken, (req, res) => {
   res.json({ message: `Welcome to the dashboard, ${req.user.email}!` });
 });
 
+// Image Upload Route
+app.post("/api/upload", upload.single("image"), (req, res) => {
+  try {
+    res.status(200).json({ imageUrl: req.file.path });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Image upload failed" });
+  }
+});
+
+// Root Route
 app.get("/", (req, res) => {
   res.send("Service is Live");
 });
