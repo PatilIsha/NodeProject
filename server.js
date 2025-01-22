@@ -14,6 +14,7 @@ app.use(cors());
 
 // MongoDB Connection
 const mongoURI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 5000;
 mongoose
   .connect(mongoURI, {})
   .then(() => console.log("MongoDB Connected"))
@@ -135,5 +136,5 @@ app.get("/", (req, res) => {
   res.send("Service is Live");
 });
 
-
+app.listen(PORT, () => console.log("Server running on http://localhost:5000"));
 
